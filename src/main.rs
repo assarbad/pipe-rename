@@ -34,14 +34,17 @@ struct Opts {
     #[clap(short = 'e', long)]
     editor: Option<String>,
     /// Prettify diffs
-    #[clap(short, long)]
+    #[clap(short = 'p', long)]
     pretty_diff: bool,
     /// Answer all prompts with yes
     #[clap(short = 'y', long = "yes")]
     assume_yes: bool,
     /// Overwrite existing files
-    #[clap(short, long)]
+    #[clap(short = 'f', long)]
     force: bool,
+    /// Only edit file names
+    #[clap(short = 'n', long)]
+    name_only: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -196,13 +199,14 @@ fn expand_dir(path: &str) -> anyhow::Result<Vec<String>, io::Error> {
         .collect())
 }
 
-fn open_editor(input_files: &[String], editor_string: &str) -> anyhow::Result<Vec<String>> {
+fn open_editor(input_files: &[String], editor_string: &str, only_name: bool) -> anyhow::Result<Vec<String>> {
     let mut tmpfile = tempfile::Builder::new()
         .prefix("renamer-")
         .suffix(".txt")
         .tempfile()
         .context("Could not create temp file")?;
-    write!(tmpfile, "{}", input_files.join("\n"))?;
+    let input_files = if only_name { input_files.to_vec().into_iter().map(|x: String| x).collect::<Vec<String>>().join("\n") } else {input_files.join("\n")};
+    write!(tmpfile, "{}", input_files)?;
     let editor_parsed = shell_words::split(editor_string)
         .expect("failed to parse command line flags in EDITOR command");
     tmpfile.seek(SeekFrom::Start(0))?;
@@ -357,7 +361,7 @@ fn main() -> anyhow::Result<()> {
     let mut buffer = input_files.clone();
 
     loop {
-        let new_files = open_editor(&buffer, &editor)?;
+        let new_files = open_editor(&buffer, &editor, opts.name_only)?;
         let replacements = find_renames(&input_files, &new_files)?;
         println!();
 
