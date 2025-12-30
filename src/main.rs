@@ -38,7 +38,7 @@ struct Opts {
     editor: Option<String>,
 
     /// Prettify diffs
-    #[clap(short, long)]
+    #[clap(short = 'd', long)]
     pretty_diff: bool,
 
     /// Answer all prompts with yes
@@ -52,6 +52,10 @@ struct Opts {
     /// Undo the previous renaming operation
     #[clap(short, long)]
     undo: bool,
+
+    /// Create parent directories if needed
+    #[clap(short, long)]
+    parents: bool,
 
     /// Only rename filenames
     #[clap(short = 'n', long)]
@@ -383,6 +387,7 @@ fn print_replacements(replacements: &Vec<Rename>, pretty: bool) {
 fn execute_renames(
     replacements: &Vec<Rename>,
     rename_command: Option<String>,
+    parents: bool,
 ) -> anyhow::Result<()> {
     for replacement in replacements {
         if let Some(ref cmd) = rename_command {
@@ -396,8 +401,8 @@ fn execute_renames(
         } else {
             match fs::rename(&replacement.original, &replacement.new) {
                 Ok(()) => (),
-                // If renaming fails, try creating parent directories and try again.
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // If renaming fails, optionally create parent directories and try again.
+                Err(e) if parents && e.kind() == std::io::ErrorKind::NotFound => {
                     let dir = &replacement.new.parent();
                     if let Some(dir) = dir {
                         fs::create_dir_all(dir)?;
@@ -505,7 +510,7 @@ fn main() -> anyhow::Result<()> {
 
     if opts.undo {
         let replacements = load_undo_renames(backup_file)?;
-        execute_renames(&replacements, opts.rename_command)?;
+        execute_renames(&replacements, opts.rename_command, false)?;
         println!("Restored {} files.", replacements.len());
         return Ok(());
     }
@@ -539,7 +544,7 @@ fn main() -> anyhow::Result<()> {
 
         match prompt(&menu_options, opts.assume_yes)? {
             MenuItem::Yes => {
-                execute_renames(&replacements, opts.rename_command)?;
+                execute_renames(&replacements, opts.rename_command, opts.parents)?;
                 write_undo_renames(backup_file, replacements)?;
                 break;
             }
