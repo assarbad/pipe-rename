@@ -72,6 +72,9 @@ OPTIONS:
     -p, --parents
             Create parent directories if needed
 
+    -q, --quiet
+            Skip printing replacement filenames
+
     -u, --undo
             Undo the previous renaming operation
 
@@ -80,7 +83,6 @@ OPTIONS:
 
     -y, --yes
             Answer all prompts with yes
-
 ```
 
 ### Caveat emptor

@@ -57,6 +57,10 @@ struct Opts {
     #[clap(short, long)]
     parents: bool,
 
+    /// Skip printing replacement filenames
+    #[clap(short, long)]
+    quiet: bool,
+
     /// Only rename filenames
     #[clap(short = 'n', long)]
     filenames_only: bool,
@@ -535,7 +539,9 @@ fn main() -> anyhow::Result<()> {
 
         let menu_options = match check_existing {
             Ok(()) => {
-                print_replacements(&replacements, opts.pretty_diff);
+                if !opts.quiet {
+                    print_replacements(&replacements, opts.pretty_diff);
+                }
                 vec![MenuItem::Yes, MenuItem::No, MenuItem::Edit, MenuItem::Reset]
             }
             e @ Err(_) if opts.assume_yes => return e,
