@@ -76,3 +76,16 @@ fn test_dot() {
 fn test_dotdot() {
     let _ = run_with_env(&[".."], &[".."], true);
 }
+
+#[test]
+fn test_new_dir() -> anyhow::Result<()> {
+    let mut test_case = TestCase::new()?;
+    test_case.replace("1", "a/1")?;
+
+    let assert = test_case.run()?;
+    assert
+        .failure()
+        .stderr("Error: No such file or directory (os error 2)\n");
+
+    Ok(())
+}

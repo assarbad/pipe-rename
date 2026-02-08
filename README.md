@@ -52,10 +52,13 @@ ARGS:
 
 OPTIONS:
     -c, --rename-command <COMMAND>
-            Optionally set a custom rename command, like 'git mv'
+            Use a custom rename command, like 'git mv'
+
+    -d, --pretty-diff
+            Prettify diffs
 
     -e, --editor <EDITOR>
-            Optionally set an editor, overriding EDITOR environment variable and default
+            Specify what editor to use
 
     -f, --force
             Overwrite existing files
@@ -66,8 +69,11 @@ OPTIONS:
     -n, --filenames-only
             Only rename filenames
 
-    -p, --pretty-diff
-            Prettify diffs
+    -p, --parents
+            Create parent directories if needed
+
+    -q, --quiet
+            Skip printing replacement filenames
 
     -u, --undo
             Undo the previous renaming operation
