@@ -83,9 +83,14 @@ fn test_new_dir() -> anyhow::Result<()> {
     test_case.replace("1", "a/1")?;
 
     let assert = test_case.run()?;
-    assert
-        .failure()
-        .stderr("Error: No such file or directory (os error 2)\n");
+
+    // The OS's error text for a missing path component differs across
+    // platforms (ENOENT vs ERROR_PATH_NOT_FOUND), so derive the expected
+    // message from a real io::Error of the same kind instead of hardcoding
+    // a platform-specific string.
+    let io_err =
+        std::fs::File::open(std::path::Path::new("definitely/does/not/exist")).unwrap_err();
+    assert.failure().stderr(format!("Error: {io_err}\n"));
 
     Ok(())
 }

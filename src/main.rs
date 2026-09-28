@@ -287,16 +287,30 @@ fn open_editor(
     let editor_parsed = shell_words::split(editor_string)
         .expect("failed to parse command line flags in EDITOR command");
     tmpfile.seek(SeekFrom::Start(0))?;
-    let child = Command::new(&editor_parsed[0])
-        .args(&editor_parsed[1..])
-        .arg(tmpfile.path())
-        .spawn()
-        .with_context(|| {
-            format!(
-                "Failed to execute editor command: '{}'",
-                shell_words::join(editor_parsed)
-            )
-        })?;
+
+    let mut command = Command::new(&editor_parsed[0]);
+    command.args(&editor_parsed[1..]).arg(tmpfile.path());
+
+    // When file names are piped into us, our own stdin is a pipe rather
+    // than the terminal, and the editor would inherit it as-is. Terminal
+    // editors like vim expect stdin to be a tty and break in confusing
+    // ways otherwise (see vim/vim#18594), so reconnect the editor's stdin
+    // to the controlling terminal when one is available.
+    #[cfg(unix)]
+    if let Ok(tty) = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+    {
+        command.stdin(tty);
+    }
+
+    let child = command.spawn().with_context(|| {
+        format!(
+            "Failed to execute editor command: '{}'",
+            shell_words::join(editor_parsed)
+        )
+    })?;
 
     let output = child.wait_with_output()?;
     if !output.status.success() {

@@ -18,14 +18,26 @@ pub fn renamer(editor: impl AsRef<path::Path>) -> anyhow::Result<assert_cmd::Com
     let mut cmd =
         assert_cmd::Command::cargo_bin("renamer").context("Could not find renamer binary")?;
     cmd.arg("--yes");
-    cmd.env(
-        "EDITOR",
-        format!(
-            "{} {}",
-            editor_path.canonicalize()?.to_str().unwrap(),
-            "-n -i --wait"
-        ),
-    );
+
+    // Avoid `Path::canonicalize`: on Windows it returns a `\\?\`-prefixed
+    // verbatim path that must keep its exact backslashes to stay valid.
+    let absolute_editor_path = std::env::current_dir()?.join(&editor_path);
+    let mut editor_path_str = absolute_editor_path
+        .to_str()
+        .context("Editor path is not valid UTF-8")?
+        .to_string();
+
+    let editor_command = if cfg!(windows) {
+        // CreateProcess can't launch a `.py` file directly, and the EDITOR
+        // string is parsed with shell_words, which treats backslashes as
+        // escape characters and would otherwise mangle the path.
+        editor_path_str = editor_path_str.replace('\\', "/");
+        format!("python {editor_path_str} -n -i --wait")
+    } else {
+        format!("{editor_path_str} -n -i --wait")
+    };
+
+    cmd.env("EDITOR", editor_command);
     Ok(cmd)
 }
 
